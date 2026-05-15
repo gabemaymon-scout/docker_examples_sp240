@@ -2,23 +2,55 @@ FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-WORKDIR /app
+# =========================
+# Dependencies
+# =========================
+RUN apt-get update && apt-get install -y \
+    git \
+    build-essential \
+    gcc \
+    g++ \
+    make \
+    cmake \
+    pkg-config \
+    python3 \
+    python3-pip \
+    python3-dev \
+    pipx \
+    libcurl4-openssl-dev \
+    libsocketcan-dev \
+    can-utils \
+    libzmq3-dev \
+    libyaml-dev \
+    libelf-dev \
+    libbsd-dev \
+    fonts-powerline \
+    && rm -rf /var/lib/apt/lists/*
 
-# Explicitly install the specific system runtimes requested by the csh binary
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        libpython3.12 \
-        libyaml-0-2 \
-        libcurl4t64 \
-        libzmq5 \
-        can-utils && \
-    rm -rf /var/lib/apt/lists/*
+# =========================
+# Install meson + ninja
+# =========================
+RUN pipx install meson && \
+    apt-get update && apt-get install -y ninja-build
 
-# Copy and install your custom debian package
-COPY si-csh_24.04_amd64_2.10.3-0-g872b858.deb .
+ENV PATH="/root/.local/bin:${PATH}"
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ./si-csh_24.04_amd64_2.10.3-0-g872b858.deb && \
-    rm -rf /var/lib/apt/lists/* si-csh_24.04_amd64_2.10.3-0-g872b858.deb
+# =========================
+# Clone CSH
+# =========================
+WORKDIR /opt
 
+RUN git clone --recurse-submodules \
+    https://github.com/spaceinventor/csh.git
+
+WORKDIR /opt/csh
+
+# =========================
+# Build + install
+# =========================
+RUN ./configure && ./install
+
+# =========================
+# Default shell
+# =========================
 CMD ["csh"]
